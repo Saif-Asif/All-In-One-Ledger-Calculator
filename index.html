@@ -1,0 +1,1965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AMI Broker — Commission & Delivery System</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d0f14;
+  --bg2: #151820;
+  --bg3: #1c2030;
+  --bg4: #232840;
+  --border: #2a3050;
+  --border2: #3a4570;
+  --accent: #4f8ef7;
+  --accent2: #7eb8ff;
+  --green: #3ecf8e;
+  --red: #f76f6f;
+  --amber: #f5a623;
+  --text: #e8ecf8;
+  --text2: #8892b0;
+  --text3: #5a6480;
+  --card: #181c2a;
+  --input-bg: #0f1218;
+  --radius: 8px;
+  --font: 'IBM Plex Sans', sans-serif;
+  --mono: 'IBM Plex Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+/* LOGIN */
+#login-screen {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; background: var(--bg);
+  background-image: radial-gradient(ellipse at 20% 50%, rgba(79,142,247,0.06) 0%, transparent 60%),
+                    radial-gradient(ellipse at 80% 20%, rgba(62,207,142,0.04) 0%, transparent 50%);
+}
+.login-box {
+  background: var(--card); border: 1px solid var(--border2);
+  border-radius: 16px; padding: 48px 40px; width: 360px;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.6);
+}
+.login-logo { text-align: center; margin-bottom: 36px; }
+.login-logo h1 { font-family: var(--mono); font-size: 22px; color: var(--accent); letter-spacing: 2px; }
+.login-logo p { font-size: 11px; color: var(--text3); letter-spacing: 3px; text-transform: uppercase; margin-top: 4px; }
+.login-field { margin-bottom: 16px; }
+.login-field label { display: block; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text3); margin-bottom: 6px; font-family: var(--mono); }
+.login-field input { width: 100%; background: var(--input-bg); border: 1px solid var(--border2); border-radius: var(--radius); padding: 11px 14px; color: var(--text); font-family: var(--font); font-size: 14px; outline: none; transition: border-color 0.2s; }
+.login-field input:focus { border-color: var(--accent); }
+.login-btn { width: 100%; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); padding: 12px; font-family: var(--font); font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 8px; letter-spacing: 1px; transition: opacity 0.2s; }
+.login-btn:hover { opacity: 0.88; }
+.login-err { color: var(--red); font-size: 12px; text-align: center; margin-top: 10px; min-height: 18px; }
+
+/* LAYOUT */
+#app { display: none; height: 100vh; overflow: hidden; }
+.sidebar {
+  position: fixed; left: 0; top: 0; bottom: 0; width: 220px;
+  background: var(--bg2); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; z-index: 100;
+  padding: 0;
+}
+.sidebar-logo { padding: 24px 20px 20px; border-bottom: 1px solid var(--border); }
+.sidebar-logo h1 { font-family: var(--mono); font-size: 15px; color: var(--accent); letter-spacing: 1px; }
+.sidebar-logo p { font-size: 9px; color: var(--text3); letter-spacing: 2px; text-transform: uppercase; margin-top: 3px; }
+.sidebar-user { padding: 10px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.sidebar-user span { font-size: 11px; color: var(--text2); font-family: var(--mono); }
+.sidebar-user button { font-size: 9px; background: none; border: 1px solid var(--border2); color: var(--text3); border-radius: 4px; padding: 2px 7px; cursor: pointer; }
+.sidebar-user button:hover { color: var(--red); border-color: var(--red); }
+.nav-section { padding: 12px 12px 4px; }
+.nav-section-label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--text3); font-family: var(--mono); padding: 0 8px 6px; }
+.nav-btn {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  background: none; border: none; color: var(--text2); padding: 9px 10px;
+  border-radius: 6px; cursor: pointer; font-family: var(--font); font-size: 13px;
+  text-align: left; transition: all 0.15s;
+}
+.nav-btn:hover { background: var(--bg3); color: var(--text); }
+.nav-btn.active { background: rgba(79,142,247,0.12); color: var(--accent2); }
+.nav-btn .nav-icon { width: 18px; text-align: center; font-size: 14px; }
+.sidebar-bottom { margin-top: auto; padding: 12px; border-top: 1px solid var(--border); }
+
+.main { margin-left: 220px; height: 100vh; overflow-y: auto; padding: 28px 32px; }
+.page { display: none; }
+.page.active { display: block; }
+.page-header { margin-bottom: 24px; }
+.page-header h2 { font-size: 20px; font-weight: 600; color: var(--text); font-family: var(--mono); }
+.page-header p { font-size: 12px; color: var(--text3); margin-top: 4px; }
+
+/* STATS */
+.stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 24px; }
+.stat-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
+.stat-card .label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text3); font-family: var(--mono); }
+.stat-card .value { font-size: 26px; font-weight: 600; font-family: var(--mono); margin-top: 6px; }
+.stat-card.blue .value { color: var(--accent2); }
+.stat-card.green .value { color: var(--green); }
+.stat-card.red .value { color: var(--red); }
+.stat-card.amber .value { color: var(--amber); }
+
+/* TABLES */
+.table-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.table-card-header { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.table-card-header h3 { font-size: 13px; font-weight: 500; font-family: var(--mono); color: var(--text); }
+.tbl { width: 100%; border-collapse: collapse; }
+.tbl th { background: var(--bg3); color: var(--text3); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; font-family: var(--mono); padding: 10px 14px; text-align: left; font-weight: 500; border-bottom: 1px solid var(--border); }
+.tbl td { padding: 10px 14px; font-size: 13px; border-bottom: 1px solid var(--border); color: var(--text2); vertical-align: middle; }
+.tbl tr:last-child td { border-bottom: none; }
+.tbl tr:hover td { background: rgba(255,255,255,0.02); }
+.tbl td.num { font-family: var(--mono); font-size: 12px; color: var(--text); }
+.tbl td.mono { font-family: var(--mono); font-size: 11px; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 10px; font-family: var(--mono); letter-spacing: 1px; text-transform: uppercase; font-weight: 600; }
+.badge.buyer { background: rgba(62,207,142,0.12); color: var(--green); }
+.badge.supplier { background: rgba(247,111,111,0.12); color: var(--red); }
+.badge.cash { background: rgba(245,166,35,0.12); color: var(--amber); }
+.badge.journal { background: rgba(79,142,247,0.12); color: var(--accent2); }
+.badge.delivery { background: rgba(126,184,255,0.12); color: #a0c8ff; }
+
+/* BUTTONS */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: var(--radius); border: none; cursor: pointer; font-family: var(--font); font-size: 13px; font-weight: 500; transition: all 0.15s; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { opacity: 0.85; }
+.btn-success { background: var(--green); color: #0d1a10; }
+.btn-success:hover { opacity: 0.85; }
+.btn-danger { background: var(--red); color: #fff; }
+.btn-danger:hover { opacity: 0.85; }
+.btn-ghost { background: var(--bg3); color: var(--text2); border: 1px solid var(--border2); }
+.btn-ghost:hover { background: var(--bg4); color: var(--text); }
+.btn-sm { padding: 5px 10px; font-size: 11px; }
+.btn-icon { padding: 6px 8px; background: none; border: 1px solid var(--border); color: var(--text3); border-radius: 5px; cursor: pointer; font-size: 12px; transition: all 0.15s; }
+.btn-icon:hover { border-color: var(--accent); color: var(--accent); }
+.btn-icon.del:hover { border-color: var(--red); color: var(--red); }
+.btn-icon.pdf:hover { border-color: var(--green); color: var(--green); }
+
+/* MODALS */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+  z-index: 999; display: none; align-items: center; justify-content: center; padding: 20px;
+}
+.modal-overlay.open { display: flex; }
+.modal { background: var(--bg2); border: 1px solid var(--border2); border-radius: 14px; width: 100%; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 40px 80px rgba(0,0,0,0.7); }
+.modal-sm { max-width: 480px; }
+.modal-md { max-width: 680px; }
+.modal-lg { max-width: 900px; }
+.modal-xl { max-width: 1100px; }
+.modal-head { padding: 18px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.modal-head h3 { font-size: 15px; font-weight: 600; font-family: var(--mono); }
+.modal-close { background: none; border: none; color: var(--text3); font-size: 20px; cursor: pointer; line-height: 1; }
+.modal-close:hover { color: var(--red); }
+.modal-body { padding: 24px; overflow-y: auto; flex: 1; }
+.modal-foot { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; flex-shrink: 0; }
+
+/* FORMS */
+.form-grid { display: grid; gap: 14px; }
+.form-grid-2 { grid-template-columns: 1fr 1fr; }
+.form-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+.form-grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+.form-col2 { grid-column: span 2; }
+.form-col3 { grid-column: span 3; }
+.form-col4 { grid-column: span 4; }
+.f-group { display: flex; flex-direction: column; gap: 5px; }
+.f-group label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text3); font-family: var(--mono); }
+.f-input, .f-select, .f-textarea {
+  background: var(--input-bg); border: 1px solid var(--border2); border-radius: 6px;
+  padding: 9px 12px; color: var(--text); font-family: var(--font); font-size: 13px;
+  outline: none; transition: border-color 0.2s; width: 100%;
+}
+.f-input:focus, .f-select:focus, .f-textarea:focus { border-color: var(--accent); }
+.f-input.readonly { background: var(--bg3); color: var(--accent2); font-family: var(--mono); cursor: not-allowed; }
+.f-select option { background: var(--bg2); }
+.f-textarea { resize: vertical; min-height: 70px; }
+.f-section { border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 4px; }
+.f-section-title { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-family: var(--mono); margin-bottom: 12px; font-weight: 600; }
+.f-divider { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+.calc-display { background: var(--bg3); border: 1px solid var(--border2); border-radius: 6px; padding: 10px 14px; font-family: var(--mono); font-size: 18px; color: var(--green); font-weight: 600; text-align: right; }
+
+/* TOOLBAR */
+.toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; gap: 12px; flex-wrap: wrap; }
+.toolbar-left { display: flex; align-items: center; gap: 10px; }
+.toolbar-right { display: flex; align-items: center; gap: 10px; }
+.search-box { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 14px; color: var(--text); font-family: var(--font); font-size: 13px; outline: none; width: 220px; }
+.search-box:focus { border-color: var(--accent); }
+.filter-select { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px; color: var(--text2); font-size: 12px; font-family: var(--mono); outline: none; cursor: pointer; }
+.filter-select:focus { border-color: var(--accent); }
+
+/* DELIVERY FORM specific */
+.delivery-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 16px; }
+.side-box { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+.side-box.supplier-side { border-left: 3px solid var(--red); }
+.side-box.purchaser-side { border-left: 3px solid var(--green); }
+.side-label { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; font-family: var(--mono); font-weight: 600; margin-bottom: 12px; }
+.side-label.s { color: var(--red); }
+.side-label.p { color: var(--green); }
+.net-amount-display { background: var(--input-bg); border: 1px solid var(--border2); border-radius: 6px; padding: 10px 12px; font-family: var(--mono); font-size: 14px; color: var(--amber); font-weight: 600; text-align: right; }
+
+/* LEDGER PARTY CARD */
+.party-ledger-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; overflow: hidden; }
+.party-ledger-header { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--bg3); }
+.party-ledger-header h4 { font-family: var(--mono); font-size: 14px; }
+.party-balance { font-family: var(--mono); font-size: 18px; font-weight: 600; color: var(--accent2); }
+
+/* TABS */
+.tab-bar { display: flex; gap: 4px; margin-bottom: 16px; background: var(--bg3); border-radius: 8px; padding: 4px; }
+.tab-btn { padding: 7px 16px; border-radius: 6px; border: none; background: none; color: var(--text3); font-family: var(--mono); font-size: 12px; cursor: pointer; transition: all 0.15s; }
+.tab-btn.active { background: var(--bg2); color: var(--accent2); }
+
+/* TRIAL BALANCE */
+.trial-row { display: flex; justify-content: space-between; padding: 9px 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.trial-row:hover { background: rgba(255,255,255,0.02); }
+.trial-row .party-name { color: var(--text2); }
+.trial-row .dr { color: var(--red); font-family: var(--mono); }
+.trial-row .cr { color: var(--green); font-family: var(--mono); }
+.trial-total { background: var(--bg3); padding: 12px 16px; display: flex; justify-content: space-between; font-weight: 600; font-family: var(--mono); font-size: 14px; border-top: 1px solid var(--border2); }
+
+/* CASH BOOK */
+.voucher-type { display: flex; gap: 8px; margin-bottom: 16px; }
+.vtype-btn { flex: 1; padding: 10px; border-radius: 6px; border: 1px solid var(--border2); background: none; color: var(--text2); font-family: var(--mono); font-size: 12px; cursor: pointer; transition: all 0.2s; }
+.vtype-btn.active.receipt { background: rgba(62,207,142,0.12); border-color: var(--green); color: var(--green); }
+.vtype-btn.active.payment { background: rgba(247,111,111,0.12); border-color: var(--red); color: var(--red); }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+/* TOAST */
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--bg3); border: 1px solid var(--border2); border-radius: 8px; padding: 12px 18px; font-size: 13px; font-family: var(--mono); color: var(--text); z-index: 9999; transform: translateY(80px); opacity: 0; transition: all 0.3s; }
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { border-left: 3px solid var(--green); }
+.toast.error { border-left: 3px solid var(--red); }
+
+/* USERS PAGE */
+.user-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.user-info h4 { font-size: 14px; font-family: var(--mono); }
+.user-info span { font-size: 11px; color: var(--text3); }
+.supervisor-badge { background: rgba(245,166,35,0.15); color: var(--amber); font-size: 10px; font-family: var(--mono); padding: 2px 8px; border-radius: 3px; letter-spacing: 1px; text-transform: uppercase; margin-left: 8px; }
+
+/* RESPONSIVE ADJUSTMENTS */
+@media (max-width: 900px) {
+  .sidebar { width: 56px; }
+  .sidebar-logo p, .nav-btn span, .sidebar-user span, .sidebar-user button { display: none; }
+  .sidebar-logo h1 { font-size: 11px; letter-spacing: 0; }
+  .main { margin-left: 56px; padding: 16px; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .delivery-sides { grid-template-columns: 1fr; }
+  .form-grid-2, .form-grid-3, .form-grid-4 { grid-template-columns: 1fr 1fr; }
+  .form-col3, .form-col4 { grid-column: span 2; }
+}
+
+.empty-state { padding: 60px 20px; text-align: center; color: var(--text3); }
+.empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+.empty-state p { font-size: 13px; font-family: var(--mono); }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <h1>AMI BROKER</h1>
+      <p>Commission &amp; Delivery System</p>
+    </div>
+    <div class="login-field">
+      <label>Username</label>
+      <input type="text" id="l-user" placeholder="Enter username" autocomplete="off">
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <input type="password" id="l-pass" placeholder="Enter password">
+    </div>
+    <button class="login-btn" onclick="doLogin()">Sign In</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <h1>AMI BROKER</h1>
+      <p>Ledger Pro</p>
+    </div>
+    <div class="sidebar-user">
+      <span id="sidebar-username">user</span>
+      <button onclick="doLogout()">Exit</button>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">Overview</div>
+      <button class="nav-btn active" onclick="nav('dashboard')" id="nav-dashboard">
+        <span class="nav-icon">📊</span><span>Dashboard</span>
+      </button>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">Entry</div>
+      <button class="nav-btn" onclick="nav('delivery')" id="nav-delivery">
+        <span class="nav-icon">🚚</span><span>Delivery</span>
+      </button>
+      <button class="nav-btn" onclick="nav('trading')" id="nav-trading">
+        <span class="nav-icon">🔄</span><span>Trading</span>
+      </button>
+      <button class="nav-btn" onclick="nav('cashbook')" id="nav-cashbook">
+        <span class="nav-icon">💰</span><span>Cash Book</span>
+      </button>
+      <button class="nav-btn" onclick="nav('journal')" id="nav-journal">
+        <span class="nav-icon">📓</span><span>Journal</span>
+      </button>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">Reports</div>
+      <button class="nav-btn" onclick="nav('ledger')" id="nav-ledger">
+        <span class="nav-icon">📘</span><span>Ledger</span>
+      </button>
+      <button class="nav-btn" onclick="nav('trial')" id="nav-trial">
+        <span class="nav-icon">⚖️</span><span>Trial Balance</span>
+      </button>
+      <button class="nav-btn" onclick="nav('stock')" id="nav-stock">
+        <span class="nav-icon">📦</span><span>Stock Ledger</span>
+      </button>
+      <button class="nav-btn" onclick="nav('reports')" id="nav-reports">
+        <span class="nav-icon">📋</span><span>Del. Report</span>
+      </button>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">Masters</div>
+      <button class="nav-btn" onclick="nav('items')" id="nav-items">
+        <span class="nav-icon">🏷️</span><span>Items</span>
+      </button>
+      <button class="nav-btn" onclick="nav('accounts')" id="nav-accounts">
+        <span class="nav-icon">🏦</span><span>Accounts</span>
+      </button>
+      <button class="nav-btn" onclick="nav('users')" id="nav-users">
+        <span class="nav-icon">👤</span><span>Users</span>
+      </button>
+    </div>
+  </nav>
+
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <h2>Dashboard</h2>
+        <p>Financial overview — AMI Broker</p>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card blue">
+          <div class="label">Total Commission</div>
+          <div class="value" id="d-total">0.00</div>
+        </div>
+        <div class="stat-card green">
+          <div class="label">Buyer Comm.</div>
+          <div class="value" id="d-buyer">0.00</div>
+        </div>
+        <div class="stat-card red">
+          <div class="label">Supplier Comm.</div>
+          <div class="value" id="d-supplier">0.00</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="label">Delivery Brokerage</div>
+          <div class="value" id="d-delivery">0.00</div>
+        </div>
+      </div>
+      <div class="stats-grid" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:24px">
+        <div class="stat-card blue">
+          <div class="label">Cash Receipts</div>
+          <div class="value" id="d-cash-in" style="font-size:20px">0.00</div>
+        </div>
+        <div class="stat-card red">
+          <div class="label">Cash Payments</div>
+          <div class="value" id="d-cash-out" style="font-size:20px">0.00</div>
+        </div>
+        <div class="stat-card green">
+          <div class="label">Cash Balance</div>
+          <div class="value" id="d-cash-bal" style="font-size:20px">0.00</div>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-card-header">
+          <h3>Recent Transactions</h3>
+          <span class="badge buyer">Live</span>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead><tr>
+              <th>Date</th><th>Party</th><th>Type</th><th>Description</th><th>Amount</th><th>Comm/Brokerage</th>
+            </tr></thead>
+            <tbody id="d-recent"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- DELIVERY -->
+    <div class="page" id="page-delivery">
+      <div class="page-header">
+        <h2>Delivery Entry</h2>
+        <p>Soda delivery — Supplier &amp; Purchaser sides</p>
+      </div>
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <input class="search-box" placeholder="Search by party, bill no…" oninput="renderDelivery(this.value)" id="del-search">
+          <select class="filter-select" onchange="renderDelivery()" id="del-filter">
+            <option value="">All</option>
+            <option value="supplier">By Supplier</option>
+            <option value="purchaser">By Purchaser</option>
+          </select>
+        </div>
+        <div class="toolbar-right">
+          <button class="btn btn-ghost btn-sm" onclick="exportDeliveryReport()">📄 Report PDF</button>
+          <button class="btn btn-primary" onclick="openDeliveryModal()">+ New Delivery</button>
+        </div>
+      </div>
+      <div class="table-card">
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead><tr>
+              <th>Bill No</th><th>Date</th><th>Item</th><th>Supplier</th><th>Purchaser</th><th>Bags</th><th>Wgt</th><th>S.Rate</th><th>P.Rate</th><th>Truck</th><th>S.Net</th><th>P.Net</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="del-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRADING (Buyer/Supplier Commission entries) -->
+    <div class="page" id="page-trading">
+      <div class="page-header">
+        <h2>Trading — Commission Entries</h2>
+        <p>Buyer &amp; Supplier commission records</p>
+      </div>
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <div class="tab-bar">
+            <button class="tab-btn active" onclick="setTradingType('buyer',this)">Buyer</button>
+            <button class="tab-btn" onclick="setTradingType('supplier',this)">Supplier</button>
+          </div>
+          <input class="search-box" placeholder="Search party…" oninput="renderTrading(this.value)" id="tr-search">
+        </div>
+        <div class="toolbar-right">
+          <button class="btn btn-primary" onclick="openTradingModal()">+ New Entry</button>
+        </div>
+      </div>
+      <div class="table-card">
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead><tr>
+              <th>Date</th><th>Party</th><th>PO#</th><th>Rate</th><th>Weight</th><th>Transport</th><th>Misc</th><th>Grand Total</th><th>Comm %</th><th>Commission</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="tr-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- CASH BOOK -->
+    <div class="page" id="page-cashbook">
+      <div class="page-header">
+        <h2>Cash Book</h2>
+        <p>Cash receipts and payments</p>
+      </div>
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <div class="tab-bar">
+            <button class="tab-btn active" onclick="setCashFilter('all',this)">All</button>
+            <button class="tab-btn" onclick="setCashFilter('receipt',this)">Receipts</button>
+            <button class="tab-btn" onclick="setCashFilter('payment',this)">Payments</button>
+          </div>
+          <input class="search-box" placeholder="Search…" oninput="renderCash(this.value)" id="cash-search">
+        </div>
+        <div class="toolbar-right">
+          <button class="btn btn-ghost btn-sm" onclick="exportCashPDF()">📄 PDF</button>
+          <button class="btn btn-primary" onclick="openCashModal()">+ New Voucher</button>
+        </div>
+      </div>
+      <div class="table-card">
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead><tr>
+              <th>Voucher#</th><th>Date</th><th>Type</th><th>Account</th><th>Description</th><th>Amount</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="cash-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- JOURNAL -->
+    <div class="page" id="page-journal">
+      <div class="page-header">
+        <h2>Journal Vouchers</h2>
+        <p>Debit &amp; credit entries</p>
+      </div>
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <input class="search-box" placeholder="Search narration…" oninput="renderJournal(this.value)">
+        </div>
+        <div class="toolbar-right">
+          <button class="btn btn-ghost btn-sm" onclick="exportJournalPDF()">📄 PDF</button>
+          <button class="btn btn-primary" onclick="openJournalModal()">+ New Voucher</button>
+        </div>
+      </div>
+      <div class="table-card">
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead><tr>
+              <th>Voucher#</th><th>Date</th><th>Narration</th><th>Account</th><th>Debit</th><th>Credit</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="jnl-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEDGER -->
+    <div class="page" id="page-ledger">
+      <div class="page-header">
+        <h2>Parties Ledger</h2>
+        <p>Full account history per party</p>
+      </div>
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <input class="search-box" placeholder="Search party…" oninput="renderLedger(this.value)" id="led-search">
+          <select class="filter-select" id="led-from">
+            <option value="">From Date</option>
+          </select>
+          <select class="filter-select" id="led-type">
+            <option value="">All Types</option>
+            <option value="buyer">Buyer</option>
+            <option value="supplier">Supplier</option>
+            <option value="delivery">Delivery</option>
+          </select>
+        </div>
+        <div class="toolbar-right">
+          <button class="btn btn-ghost btn-sm" onclick="exportAllLedgerPDF()">📄 Full Ledger PDF</button>
+        </div>
+      </div>
+      <div id="ledger-container"></div>
+    </div>
+
+    <!-- TRIAL BALANCE -->
+    <div class="page" id="page-trial">
+      <div class="page-header">
+        <h2>Trial Balance</h2>
+        <p>Balances as on date</p>
+      </div>
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <div class="tab-bar">
+            <button class="tab-btn active" onclick="setTrialFilter('all',this)">All</button>
+            <button class="tab-btn" onclick="setTrialFilter('receivable',this)">Receivable</button>
+            <button class="tab-btn" onclick="setTrialFilter('payable',this)">Payable</button>
+            <button class="tab-btn" onclick="setTrialFilter('pl',this)">P&amp;L</button>
+          </div>
+        </div>
+        <div class="toolbar-right">
+          <label style="font-size:11px;color:var(--text3);font-family:var(--mono)">From</label>
+          <input type="date" class="f-input" style="width:140px;padding:7px 10px;font-size:12px" id="trial-from">
+          <label style="font-size:11px;color:var(--text3);font-family:var(--mono)">To</label>
+          <input type="date" class="f-input" style="width:140px;padding:7px 10px;font-size:12px" id="trial-to">
+          <button class="btn btn-ghost btn-sm" onclick="renderTrial()">Show</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportTrialPDF()">📄 PDF</button>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-card-header" style="justify-content:flex-end">
+          <div style="display:flex;gap:32px;font-family:var(--mono);font-size:13px">
+            <span>Total Dr: <span id="trial-total-dr" style="color:var(--red)">0.00</span></span>
+            <span>Total Cr: <span id="trial-total-cr" style="color:var(--green)">0.00</span></span>
+          </div>
+        </div>
+        <table class="tbl">
+          <thead><tr><th>Account / Party</th><th>Type</th><th class="num" style="text-align:right">Debit</th><th class="num" style="text-align:right">Credit</th><th class="num" style="text-align:right">Balance</th></tr></thead>
+          <tbody id="trial-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- STOCK LEDGER -->
+    <div class="page" id="page-stock">
+      <div class="page-header">
+        <h2>Stock Ledger</h2>
+        <p>Item-wise stock movement</p>
+      </div>
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <select class="filter-select" id="sl-item" onchange="renderStock()">
+            <option value="">All Items</option>
+          </select>
+          <select class="filter-select" id="sl-godown" onchange="renderStock()">
+            <option value="">All Godowns</option>
+          </select>
+          <input type="date" class="f-input" style="width:140px;padding:7px;font-size:12px" id="sl-from">
+          <input type="date" class="f-input" style="width:140px;padding:7px;font-size:12px" id="sl-to">
+          <button class="btn btn-ghost btn-sm" onclick="renderStock()">Show</button>
+        </div>
+        <div class="toolbar-right">
+          <button class="btn btn-ghost btn-sm" onclick="exportStockPDF()">📄 PDF</button>
+        </div>
+      </div>
+      <div class="table-card">
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead><tr><th>Date</th><th>Bill#</th><th>Item</th><th>Godown</th><th>Type</th><th>Bags In</th><th>Bags Out</th><th>Balance</th></tr></thead>
+            <tbody id="stock-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- DELIVERY REPORT -->
+    <div class="page" id="page-reports">
+      <div class="page-header">
+        <h2>Delivery Report</h2>
+        <p>Filter and print delivery records</p>
+      </div>
+      <div class="table-card" style="padding:20px;margin-bottom:16px">
+        <div class="form-grid form-grid-4" style="gap:12px">
+          <div class="f-group">
+            <label>Supplier</label>
+            <select class="f-select" id="rpt-supplier"><option value="">All</option></select>
+          </div>
+          <div class="f-group">
+            <label>Purchaser</label>
+            <select class="f-select" id="rpt-purchaser"><option value="">All</option></select>
+          </div>
+          <div class="f-group">
+            <label>Item</label>
+            <select class="f-select" id="rpt-item"><option value="">All</option></select>
+          </div>
+          <div class="f-group">
+            <label>Truck No</label>
+            <input class="f-input" id="rpt-truck" placeholder="Any">
+          </div>
+          <div class="f-group">
+            <label>From Date</label>
+            <input type="date" class="f-input" id="rpt-from">
+          </div>
+          <div class="f-group">
+            <label>To Date</label>
+            <input type="date" class="f-input" id="rpt-to">
+          </div>
+          <div class="f-group">
+            <label>Sort By</label>
+            <select class="f-select" id="rpt-sort">
+              <option value="date">Date</option>
+              <option value="billno">Bill No</option>
+              <option value="supplier">Supplier</option>
+              <option value="purchaser">Purchaser</option>
+            </select>
+          </div>
+          <div class="f-group" style="justify-content:flex-end;flex-direction:row;align-items:flex-end;gap:8px">
+            <button class="btn btn-ghost" onclick="renderReport()">Show</button>
+            <button class="btn btn-primary" onclick="exportReportPDF()">📄 Print</button>
+          </div>
+        </div>
+      </div>
+      <div class="table-card">
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead><tr><th>Bill#</th><th>Date</th><th>Item</th><th>Supplier</th><th>Purchaser</th><th>Bags</th><th>Wgt</th><th>Truck</th><th>S.Net</th><th>P.Net</th></tr></thead>
+            <tbody id="rpt-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ITEMS -->
+    <div class="page" id="page-items">
+      <div class="page-header"><h2>Items Master</h2><p>Manage items and lot quantities</p></div>
+      <div class="toolbar">
+        <div class="toolbar-left"><input class="search-box" placeholder="Search items…" oninput="renderItems(this.value)"></div>
+        <div class="toolbar-right"><button class="btn btn-primary" onclick="openItemModal()">+ Add Item</button></div>
+      </div>
+      <div class="table-card">
+        <table class="tbl">
+          <thead><tr><th>Item Name</th><th>Lot Quantity</th><th>Actions</th></tr></thead>
+          <tbody id="items-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ACCOUNTS -->
+    <div class="page" id="page-accounts">
+      <div class="page-header"><h2>Chart of Accounts</h2><p>Account codes and heads</p></div>
+      <div class="toolbar">
+        <div class="toolbar-left"><input class="search-box" placeholder="Search accounts…" oninput="renderAccounts(this.value)"></div>
+        <div class="toolbar-right"><button class="btn btn-primary" onclick="openAccountModal()">+ Add Account</button></div>
+      </div>
+      <div class="table-card">
+        <table class="tbl">
+          <thead><tr><th>Code</th><th>Head of Account</th><th>Type</th><th>Actions</th></tr></thead>
+          <tbody id="acc-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- USERS -->
+    <div class="page" id="page-users">
+      <div class="page-header"><h2>User Management</h2><p>Add, delete and change passwords</p></div>
+      <div class="toolbar">
+        <div class="toolbar-right"><button class="btn btn-primary" onclick="openUserModal()">+ Add User</button></div>
+      </div>
+      <div id="users-container"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ===== MODALS ===== -->
+
+<!-- DELIVERY MODAL -->
+<div class="modal-overlay" id="modal-delivery">
+  <div class="modal modal-xl">
+    <div class="modal-head">
+      <h3 id="del-modal-title">New Delivery Entry</h3>
+      <button class="modal-close" onclick="closeModal('modal-delivery')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="del-id">
+      <div class="f-section">
+        <div class="f-section-title">Bill Information</div>
+        <div class="form-grid form-grid-4">
+          <div class="f-group"><label>Bill No</label><input class="f-input" id="del-billno" placeholder="Auto"></div>
+          <div class="f-group"><label>Date</label><input type="date" class="f-input" id="del-date"></div>
+          <div class="f-group"><label>Arrival Date</label><input type="date" class="f-input" id="del-arrival"></div>
+          <div class="f-group"><label>Soda #</label><input class="f-input" id="del-soda" placeholder="Soda number"></div>
+          <div class="f-group"><label>Item</label>
+            <select class="f-select" id="del-item"><option value="">Select Item</option></select>
+          </div>
+          <div class="f-group"><label>Bags</label><input type="number" class="f-input" id="del-bags" oninput="calcDelivery()" placeholder="0"></div>
+          <div class="f-group"><label>Sup Weight</label><input type="number" step="0.01" class="f-input" id="del-supwt" oninput="calcDelivery()" placeholder="0.00"></div>
+          <div class="f-group"><label>Pur Weight</label><input type="number" step="0.01" class="f-input" id="del-purwt" oninput="calcDelivery()" placeholder="0.00"></div>
+          <div class="f-group"><label>S.Rate</label><input type="number" step="0.01" class="f-input" id="del-srate" oninput="calcDelivery()" placeholder="0.00"></div>
+          <div class="f-group"><label>P.Rate</label><input type="number" step="0.01" class="f-input" id="del-prate" oninput="calcDelivery()" placeholder="0.00"></div>
+          <div class="f-group"><label>Truck No</label><input class="f-input" id="del-truck" placeholder="Truck number"></div>
+          <div class="f-group"><label>Transporter</label><input class="f-input" id="del-transporter" placeholder="Name"></div>
+          <div class="f-group"><label>Cartage-Own</label><input type="number" step="0.01" class="f-input" id="del-cartage" placeholder="0.00" oninput="calcDelivery()"></div>
+          <div class="f-group form-col2"><label>Remarks</label><input class="f-input" id="del-remarks" placeholder="General remarks"></div>
+        </div>
+      </div>
+
+      <div class="delivery-sides">
+        <div class="side-box supplier-side">
+          <div class="side-label s">▌ Supplier Side</div>
+          <div class="form-grid form-grid-2">
+            <div class="f-group form-col2"><label>Supplier</label>
+              <input class="f-input" list="sup-suggestions" id="del-supplier" placeholder="Supplier name">
+              <datalist id="sup-suggestions"></datalist>
+            </div>
+            <div class="f-group"><label>Coolie</label><input type="number" step="0.01" class="f-input" id="del-s-coolie" oninput="calcDelivery()" placeholder="0"></div>
+            <div class="f-group"><label>Cartage</label><input type="number" step="0.01" class="f-input" id="del-s-cartage" oninput="calcDelivery()" placeholder="0"></div>
+            <div class="f-group"><label>Kanta</label><input type="number" step="0.01" class="f-input" id="del-s-kanta" oninput="calcDelivery()" placeholder="0"></div>
+            <div class="f-group"><label>Brokerage</label><input type="number" step="0.01" class="f-input" id="del-s-brokerage" oninput="calcDelivery()" placeholder="0"></div>
+            <div class="f-group"><label>Misc</label><input type="number" step="0.01" class="f-input" id="del-s-misc" oninput="calcDelivery()" placeholder="0"></div>
+            <div class="f-group"><label>Remarks</label><input class="f-input" id="del-s-remarks" placeholder=""></div>
+          </div>
+          <div style="margin-top:12px">
+            <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:6px;letter-spacing:1px">NET AMOUNT (SUPPLIER)</div>
+            <div class="net-amount-display" id="del-s-net">0.00</div>
+          </div>
+        </div>
+
+        <div class="side-box purchaser-side">
+          <div class="side-label p">▌ Purchaser Side</div>
+          <div class="form-grid form-grid-2">
+            <div class="f-group form-col2"><label>Purchaser</label>
+              <input class="f-input" list="pur-suggestions" id="del-purchaser" placeholder="Purchaser name">
+              <datalist id="pur-suggestions"></datalist>
+            </div>
+            <div class="f-group"><label>Coolie</label><input type="number" step="0.01" class="f-input" id="del-p-coolie" oninput="calcDelivery()" placeholder="0"></div>
+            <div class="f-group"><label>Cartage</label><input type="number" step="0.01" class="f-input" id="del-p-cartage" oninput="calcDelivery()" placeholder="0"></div>
+            <div class="f-group"><label>Kanta</label><input type="number" step="0.01" class="f-input" id="del-p-kanta" oninput="calcDelivery()" placeholder="0"></div>
+            <div class="f-group"><label>Brokerage</label><input type="number" step="0.01" class="f-input" id="del-p-brokerage" oninput="calcDelivery()" placeholder="0"></div>
+            <div class="f-group"><label>Misc</label><input type="number" step="0.01" class="f-input" id="del-p-misc" oninput="calcDelivery()" placeholder="0"></div>
+            <div class="f-group"><label>Remarks</label><input class="f-input" id="del-p-remarks" placeholder=""></div>
+          </div>
+          <div style="margin-top:12px">
+            <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:6px;letter-spacing:1px">NET AMOUNT (PURCHASER)</div>
+            <div class="net-amount-display" id="del-p-net">0.00</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modal-delivery')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveDelivery()">Save Delivery</button>
+    </div>
+  </div>
+</div>
+
+<!-- TRADING MODAL -->
+<div class="modal-overlay" id="modal-trading">
+  <div class="modal modal-md">
+    <div class="modal-head">
+      <h3 id="tr-modal-title">New Entry</h3>
+      <button class="modal-close" onclick="closeModal('modal-trading')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="tr-id">
+      <div class="form-grid form-grid-2">
+        <div class="f-group"><label>Date</label><input type="date" class="f-input" id="tr-date"></div>
+        <div class="f-group"><label>Party Name</label>
+          <input class="f-input" list="tr-party-list" id="tr-name" placeholder="Party name">
+          <datalist id="tr-party-list"></datalist>
+        </div>
+        <div class="f-group"><label>PO Number</label><input class="f-input" id="tr-po" placeholder="Optional"></div>
+        <div class="f-group"><label>Commission %</label><input type="number" step="0.001" class="f-input" id="tr-comm" oninput="calcTrading()" placeholder="e.g. 0.25"></div>
+        <div class="f-group"><label>Rate</label><input type="number" step="0.01" class="f-input" id="tr-rate" oninput="calcTrading()" placeholder="0.00"></div>
+        <div class="f-group"><label>Weight</label><input type="number" step="0.01" class="f-input" id="tr-weight" oninput="calcTrading()" placeholder="0.00"></div>
+        <div class="f-group"><label>Transport</label><input type="number" step="0.01" class="f-input" id="tr-transport" oninput="calcTrading()" placeholder="0.00"></div>
+        <div class="f-group"><label>Misc Exp</label><input type="number" step="0.01" class="f-input" id="tr-misc" oninput="calcTrading()" placeholder="0.00"></div>
+        <div class="f-group form-col2"><label>Description</label><input class="f-input" id="tr-desc" placeholder="Optional"></div>
+        <div class="f-group form-col2">
+          <label>Grand Total (Auto)</label>
+          <div class="calc-display" id="tr-total">0.00</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modal-trading')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTrading()">Save Record</button>
+    </div>
+  </div>
+</div>
+
+<!-- CASH MODAL -->
+<div class="modal-overlay" id="modal-cash">
+  <div class="modal modal-sm">
+    <div class="modal-head">
+      <h3>Cash Book Entry</h3>
+      <button class="modal-close" onclick="closeModal('modal-cash')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="cash-id">
+      <div class="voucher-type">
+        <button class="vtype-btn receipt active" id="vtype-receipt" onclick="setCashType('receipt')">Cash Receipt</button>
+        <button class="vtype-btn payment" id="vtype-payment" onclick="setCashType('payment')">Cash Payment</button>
+      </div>
+      <div class="form-grid form-grid-2">
+        <div class="f-group"><label>Voucher No</label><input class="f-input" id="cash-vno" placeholder="Auto"></div>
+        <div class="f-group"><label>Date</label><input type="date" class="f-input" id="cash-date"></div>
+        <div class="f-group form-col2"><label>Account</label>
+          <select class="f-select" id="cash-account"><option value="">Select Account</option></select>
+        </div>
+        <div class="f-group form-col2"><label>Description</label><textarea class="f-textarea" id="cash-desc" placeholder="Details…" style="min-height:55px"></textarea></div>
+        <div class="f-group form-col2"><label>Amount</label><input type="number" step="0.01" class="f-input" id="cash-amount" placeholder="0.00"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modal-cash')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCash()">Save Voucher</button>
+    </div>
+  </div>
+</div>
+
+<!-- JOURNAL MODAL -->
+<div class="modal-overlay" id="modal-journal">
+  <div class="modal modal-md">
+    <div class="modal-head">
+      <h3>Journal Voucher</h3>
+      <button class="modal-close" onclick="closeModal('modal-journal')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="jnl-id">
+      <div class="form-grid form-grid-2" style="margin-bottom:16px">
+        <div class="f-group"><label>Voucher #</label><input class="f-input" id="jnl-vno" placeholder="Auto"></div>
+        <div class="f-group"><label>Date</label><input type="date" class="f-input" id="jnl-date"></div>
+        <div class="f-group form-col2"><label>Narration</label><textarea class="f-textarea" id="jnl-narration" placeholder="Narration / description…" style="min-height:60px"></textarea></div>
+      </div>
+      <div class="f-section">
+        <div class="f-section-title">Entry</div>
+        <div class="form-grid form-grid-2">
+          <div class="f-group form-col2"><label>Account</label>
+            <select class="f-select" id="jnl-account"><option value="">Select Account</option></select>
+          </div>
+          <div class="f-group"><label>Debit</label><input type="number" step="0.01" class="f-input" id="jnl-debit" placeholder="0.00" oninput="if(this.value) document.getElementById('jnl-credit').value=''"></div>
+          <div class="f-group"><label>Credit</label><input type="number" step="0.01" class="f-input" id="jnl-credit" placeholder="0.00" oninput="if(this.value) document.getElementById('jnl-debit').value=''"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modal-journal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveJournal()">Save Voucher</button>
+    </div>
+  </div>
+</div>
+
+<!-- ITEM MODAL -->
+<div class="modal-overlay" id="modal-item">
+  <div class="modal modal-sm">
+    <div class="modal-head">
+      <h3 id="item-modal-title">Add Item</h3>
+      <button class="modal-close" onclick="closeModal('modal-item')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="item-id">
+      <div class="form-grid" style="gap:14px">
+        <div class="f-group"><label>Item Name</label><input class="f-input" id="item-name" placeholder="e.g. Soda Ash, Rice…"></div>
+        <div class="f-group"><label>Lot Quantity</label><input type="number" class="f-input" id="item-lot" placeholder="0"></div>
+        <div class="f-group"><label>Default Godown</label><input class="f-input" id="item-godown" placeholder="Godown name"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modal-item')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveItem()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ACCOUNT MODAL -->
+<div class="modal-overlay" id="modal-account">
+  <div class="modal modal-sm">
+    <div class="modal-head">
+      <h3 id="acc-modal-title">Add Account</h3>
+      <button class="modal-close" onclick="closeModal('modal-account')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="acc-id">
+      <div class="form-grid" style="gap:14px">
+        <div class="f-group"><label>Account Code</label><input class="f-input" id="acc-code" placeholder="e.g. 1001"></div>
+        <div class="f-group"><label>Head of Account</label><input class="f-input" id="acc-head" placeholder="Account name"></div>
+        <div class="f-group"><label>Type</label>
+          <select class="f-select" id="acc-type">
+            <option value="asset">Asset</option>
+            <option value="liability">Liability</option>
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+            <option value="party">Party</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modal-account')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAccount()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- USER MODAL -->
+<div class="modal-overlay" id="modal-user">
+  <div class="modal modal-sm">
+    <div class="modal-head">
+      <h3>Add User</h3>
+      <button class="modal-close" onclick="closeModal('modal-user')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid" style="gap:14px">
+        <div class="f-group"><label>Username</label><input class="f-input" id="u-name" placeholder="Username"></div>
+        <div class="f-group"><label>Password</label><input type="password" class="f-input" id="u-pass" placeholder="Password"></div>
+        <div class="f-group"><label>Confirm Password</label><input type="password" class="f-input" id="u-confirm" placeholder="Confirm"></div>
+        <div class="f-group">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="u-supervisor" style="width:auto">
+            <span>Supervisor (Admin) Access</span>
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modal-user')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveUser()">Add User</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== DATA STORE =====
+const DB = {
+  get: k => JSON.parse(localStorage.getItem('ami_'+k) || 'null'),
+  set: (k,v) => localStorage.setItem('ami_'+k, JSON.stringify(v)),
+};
+
+let users = DB.get('users') || [{id:1,username:'admin',password:'admin123',supervisor:true}];
+let deliveries = DB.get('deliveries') || [];
+let tradings = DB.get('tradings') || [];
+let cashbook = DB.get('cashbook') || [];
+let journals = DB.get('journals') || [];
+let items = DB.get('items') || [{id:1,name:'Soda Ash',lot:50,godown:'Main'},{id:2,name:'Rice',lot:100,godown:'Main'}];
+let accounts = DB.get('accounts') || [
+  {id:1,code:'1001',head:'Cash in Hand',type:'asset'},
+  {id:2,code:'2001',head:'Commission Income',type:'income'},
+  {id:3,code:'2002',head:'Brokerage Income',type:'income'},
+  {id:4,code:'3001',head:'Transport Expense',type:'expense'},
+  {id:5,code:'3002',head:'Miscellaneous Expense',type:'expense'},
+];
+
+let currentUser = null;
+let currentTradingType = 'buyer';
+let currentCashFilter = 'all';
+let currentCashType = 'receipt';
+let currentTrialFilter = 'all';
+
+function save() {
+  DB.set('users',users); DB.set('deliveries',deliveries);
+  DB.set('tradings',tradings); DB.set('cashbook',cashbook);
+  DB.set('journals',journals); DB.set('items',items); DB.set('accounts',accounts);
+}
+
+// ===== AUTH =====
+function doLogin() {
+  const u = document.getElementById('l-user').value.trim();
+  const p = document.getElementById('l-pass').value;
+  const found = users.find(x => x.username.toLowerCase() === u.toLowerCase() && x.password === p);
+  if (!found) { document.getElementById('login-err').textContent = 'Invalid username or password'; return; }
+  currentUser = found;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('sidebar-username').textContent = found.username;
+  if (!found.supervisor) {
+    document.getElementById('nav-users').style.display = 'none';
+  }
+  nav('dashboard');
+}
+
+document.getElementById('l-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+function doLogout() {
+  currentUser = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('l-user').value = '';
+  document.getElementById('l-pass').value = '';
+  document.getElementById('login-err').textContent = '';
+}
+
+// ===== NAVIGATION =====
+function nav(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  const nb = document.getElementById('nav-'+page);
+  if(nb) nb.classList.add('active');
+  const renders = {
+    dashboard: renderDashboard,
+    delivery: () => { populateDeliverySelects(); renderDelivery(); },
+    trading: renderTrading,
+    cashbook: renderCash,
+    journal: renderJournal,
+    ledger: renderLedger,
+    trial: renderTrial,
+    stock: () => { populateStockSelects(); renderStock(); },
+    reports: () => { populateReportSelects(); renderReport(); },
+    items: renderItems,
+    accounts: renderAccounts,
+    users: renderUsers,
+  };
+  if(renders[page]) renders[page]();
+}
+
+// ===== TOAST =====
+function toast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast '+type+' show';
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ===== MODAL =====
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+
+// ===== DASHBOARD =====
+function renderDashboard() {
+  const buyerComm = tradings.filter(e=>e.type==='buyer').reduce((a,e)=>a+e.commAmount,0);
+  const supComm = tradings.filter(e=>e.type==='supplier').reduce((a,e)=>a+e.commAmount,0);
+  const delBrok = deliveries.reduce((a,e)=>a+(e.sBrokerage||0)+(e.pBrokerage||0),0);
+  const cashIn = cashbook.filter(e=>e.vtype==='receipt').reduce((a,e)=>a+e.amount,0);
+  const cashOut = cashbook.filter(e=>e.vtype==='payment').reduce((a,e)=>a+e.amount,0);
+  document.getElementById('d-total').textContent = fmt(buyerComm+supComm+delBrok);
+  document.getElementById('d-buyer').textContent = fmt(buyerComm);
+  document.getElementById('d-supplier').textContent = fmt(supComm);
+  document.getElementById('d-delivery').textContent = fmt(delBrok);
+  document.getElementById('d-cash-in').textContent = fmt(cashIn);
+  document.getElementById('d-cash-out').textContent = fmt(cashOut);
+  document.getElementById('d-cash-bal').textContent = fmt(cashIn-cashOut);
+
+  const all = [
+    ...tradings.map(e=>({date:e.date,party:e.name,type:e.type,desc:e.desc||'Commission entry',amount:e.price,comm:e.commAmount,id:e.id})),
+    ...deliveries.map(e=>({date:e.date,party:e.supplier+'/'+e.purchaser,type:'delivery',desc:e.item||'Delivery',amount:(e.sNet||0)+(e.pNet||0),comm:(e.sBrokerage||0)+(e.pBrokerage||0),id:e.id})),
+    ...cashbook.map(e=>({date:e.date,party:e.account,type:e.vtype,desc:e.desc,amount:e.amount,comm:0,id:e.id})),
+  ].sort((a,b)=>b.id-a.id).slice(0,12);
+
+  document.getElementById('d-recent').innerHTML = all.map(e=>`
+    <tr>
+      <td class="mono">${e.date}</td>
+      <td>${e.party||'—'}</td>
+      <td><span class="badge ${e.type}">${e.type}</span></td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.desc||'—'}</td>
+      <td class="num">${fmt(e.amount)}</td>
+      <td class="num" style="color:var(--accent2)">${fmt(e.comm)}</td>
+    </tr>`).join('') || '<tr><td colspan="6" class="empty-state"><p>No transactions yet</p></td></tr>';
+}
+
+// ===== DELIVERY =====
+function nextBillNo() {
+  if(!deliveries.length) return 'D-001';
+  const nums = deliveries.map(d=>parseInt((d.billno||'0').replace(/\D/g,''))||0);
+  return 'D-'+(Math.max(...nums)+1).toString().padStart(3,'0');
+}
+
+function openDeliveryModal(id=null) {
+  populateItemSelect();
+  updateSuggestions();
+  document.getElementById('del-id').value = '';
+  if(id) {
+    const e = deliveries.find(d=>d.id===id);
+    if(!e) return;
+    document.getElementById('del-modal-title').textContent = 'Edit Delivery';
+    document.getElementById('del-id').value = e.id;
+    ['billno','date','arrival','soda','bags','supwt','purwt','srate','prate','truck','transporter','cartage','remarks','supplier','purchaser'].forEach(f => {
+      const el = document.getElementById('del-'+f);
+      if(el) el.value = e[f.replace(/-/g,'')] ?? '';
+    });
+    document.getElementById('del-item').value = e.item||'';
+    ['coolie','cartage','kanta','brokerage','misc','remarks'].forEach(f=>{
+      const se=document.getElementById('del-s-'+f); if(se) se.value=e['s'+capitalize(f)]??'';
+      const pe=document.getElementById('del-p-'+f); if(pe) pe.value=e['p'+capitalize(f)]??'';
+    });
+  } else {
+    document.getElementById('del-modal-title').textContent = 'New Delivery Entry';
+    document.getElementById('modal-delivery').querySelectorAll('input,select').forEach(el=>{
+      if(el.type!=='hidden') el.value='';
+    });
+    document.getElementById('del-date').valueAsDate = new Date();
+    document.getElementById('del-arrival').valueAsDate = new Date();
+    document.getElementById('del-billno').value = nextBillNo();
+  }
+  calcDelivery();
+  openModal('modal-delivery');
+}
+
+function calcDelivery() {
+  const v = id => parseFloat(document.getElementById(id)?.value)||0;
+  const supwt=v('del-supwt'), srate=v('del-srate');
+  const purwt=v('del-purwt'), prate=v('del-prate');
+  const sCoolie=v('del-s-coolie'), sCartage=v('del-s-cartage'), sKanta=v('del-s-kanta');
+  const sBrok=v('del-s-brokerage'), sMisc=v('del-s-misc');
+  const pCoolie=v('del-p-coolie'), pCartage=v('del-p-cartage'), pKanta=v('del-p-kanta');
+  const pBrok=v('del-p-brokerage'), pMisc=v('del-p-misc');
+
+  const sGross = supwt * srate;
+  const pGross = purwt * prate;
+  const sNet = sGross - sCoolie - sCartage - sKanta - sBrok - sMisc;
+  const pNet = pGross + pCoolie + pCartage + pKanta + pBrok + pMisc;
+
+  document.getElementById('del-s-net').textContent = fmt(sNet);
+  document.getElementById('del-p-net').textContent = fmt(pNet);
+}
+
+function saveDelivery() {
+  const v = id => { const el=document.getElementById(id); return el?el.value:''; };
+  const n = id => parseFloat(v(id))||0;
+  const supwt=n('del-supwt'), srate=n('del-srate');
+  const purwt=n('del-purwt'), prate=n('del-prate');
+  const sCoolie=n('del-s-coolie'), sCartage=n('del-s-cartage'), sKanta=n('del-s-kanta');
+  const sBrok=n('del-s-brokerage'), sMisc=n('del-s-misc');
+  const pCoolie=n('del-p-coolie'), pCartage=n('del-p-cartage'), pKanta=n('del-p-kanta');
+  const pBrok=n('del-p-brokerage'), pMisc=n('del-p-misc');
+  const sNet = supwt*srate - sCoolie - sCartage - sKanta - sBrok - sMisc;
+  const pNet = purwt*prate + pCoolie + pCartage + pKanta + pBrok + pMisc;
+
+  const entry = {
+    billno:v('del-billno'), date:v('del-date'), arrival:v('del-arrival'),
+    soda:v('del-soda'), item:v('del-item'), bags:n('del-bags'),
+    supwt, purwt, srate, prate,
+    truck:v('del-truck'), transporter:v('del-transporter'), cartage:n('del-cartage'),
+    remarks:v('del-remarks'), supplier:v('del-supplier'), purchaser:v('del-purchaser'),
+    sCoolie, sCartage, sKanta, sBrokerage:sBrok, sMisc, sRemarks:v('del-s-remarks'),
+    pCoolie, pCartage, pKanta, pBrokerage:pBrok, pMisc, pRemarks:v('del-p-remarks'),
+    sNet, pNet,
+  };
+  const editId = document.getElementById('del-id').value;
+  if(editId) {
+    const i = deliveries.findIndex(d=>d.id==editId);
+    if(i!==-1) deliveries[i]={...deliveries[i],...entry};
+  } else {
+    deliveries.unshift({id:Date.now(),...entry});
+  }
+  save(); closeModal('modal-delivery'); renderDelivery(); toast('Delivery saved!');
+}
+
+function renderDelivery(search='') {
+  const q = (search||document.getElementById('del-search')?.value||'').toLowerCase();
+  let list = [...deliveries].sort((a,b)=>b.id-a.id);
+  if(q) list = list.filter(e=>(e.supplier+e.purchaser+e.billno+e.truck).toLowerCase().includes(q));
+  document.getElementById('del-tbody').innerHTML = list.map(e=>`
+    <tr>
+      <td class="mono">${e.billno}</td>
+      <td class="mono">${e.date}</td>
+      <td>${e.item||'—'}</td>
+      <td>${e.supplier||'—'}</td>
+      <td>${e.purchaser||'—'}</td>
+      <td class="num">${e.bags||0}</td>
+      <td class="num">${e.supwt||0}</td>
+      <td class="num">${e.srate||0}</td>
+      <td class="num">${e.prate||0}</td>
+      <td class="mono">${e.truck||'—'}</td>
+      <td class="num" style="color:var(--red)">${fmt(e.sNet)}</td>
+      <td class="num" style="color:var(--green)">${fmt(e.pNet)}</td>
+      <td>
+        <button class="btn-icon pdf" onclick="exportDeliveryBillPDF(${e.id})" title="Print Bill">📄</button>
+        <button class="btn-icon" onclick="openDeliveryModal(${e.id})" title="Edit">✏️</button>
+        <button class="btn-icon del" onclick="delEntry('deliveries',${e.id},'delivery')" title="Delete">🗑</button>
+      </td>
+    </tr>`).join('') || '<tr><td colspan="13" class="empty-state"><p>No deliveries yet. Click + New Delivery to add one.</p></td></tr>';
+}
+
+// ===== TRADING =====
+function setTradingType(t, btn) {
+  currentTradingType = t;
+  document.querySelectorAll('#page-trading .tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTrading();
+}
+
+function openTradingModal(id=null) {
+  updatePartyList();
+  document.getElementById('tr-id').value='';
+  if(id) {
+    const e = tradings.find(t=>t.id===id);
+    if(!e) return;
+    document.getElementById('tr-modal-title').textContent='Edit '+capitalize(e.type)+' Entry';
+    document.getElementById('tr-id').value=e.id;
+    ['date','name','po','comm','rate','weight','transport','misc','desc'].forEach(f=>{
+      const el=document.getElementById('tr-'+f); if(el) el.value=e[f]??'';
+    });
+    calcTrading();
+  } else {
+    document.getElementById('tr-modal-title').textContent='New '+capitalize(currentTradingType)+' Entry';
+    document.getElementById('modal-trading').querySelectorAll('input').forEach(el=>{ if(el.type!=='hidden') el.value=''; });
+    document.getElementById('tr-date').valueAsDate=new Date();
+    document.getElementById('tr-total').textContent='0.00';
+  }
+  openModal('modal-trading');
+}
+
+function calcTrading() {
+  const v = id => parseFloat(document.getElementById(id)?.value)||0;
+  const prod = v('tr-rate')*v('tr-weight');
+  const comm = prod*v('tr-comm')/100;
+  const total = prod+v('tr-transport')+v('tr-misc')+comm;
+  document.getElementById('tr-total').textContent = fmt(total);
+}
+
+function saveTrading() {
+  const v = id => document.getElementById(id)?.value||'';
+  const n = id => parseFloat(v(id))||0;
+  const prod = n('tr-rate')*n('tr-weight');
+  const commAmount = prod*n('tr-comm')/100;
+  const price = prod+n('tr-transport')+n('tr-misc')+commAmount;
+  const entry = {
+    date:v('tr-date'),name:v('tr-name'),po:v('tr-po'),
+    rate:n('tr-rate'),weight:n('tr-weight'),transport:n('tr-transport'),
+    misc:n('tr-misc'),commPercent:n('tr-comm'),commAmount,
+    productPrice:prod,price,desc:v('tr-desc'),
+  };
+  const editId = v('tr-id');
+  if(editId) {
+    const i=tradings.findIndex(t=>t.id==editId);
+    if(i!==-1) tradings[i]={...tradings[i],...entry};
+  } else {
+    tradings.unshift({id:Date.now(),type:currentTradingType,...entry});
+  }
+  save(); closeModal('modal-trading'); renderTrading(); toast('Entry saved!');
+}
+
+function renderTrading(search='') {
+  const q=(search||document.getElementById('tr-search')?.value||'').toLowerCase();
+  let list=tradings.filter(e=>e.type===currentTradingType).sort((a,b)=>a.name.localeCompare(b.name));
+  if(q) list=list.filter(e=>e.name.toLowerCase().includes(q));
+  document.getElementById('tr-tbody').innerHTML=list.map(e=>`
+    <tr>
+      <td class="mono">${e.date}</td>
+      <td><b>${e.name}</b>${e.desc?`<div style="font-size:11px;color:var(--text3)">${e.desc}</div>`:''}</td>
+      <td class="mono">${e.po||'—'}</td>
+      <td class="num">${e.rate}</td>
+      <td class="num">${e.weight}</td>
+      <td class="num">${e.transport}</td>
+      <td class="num">${e.misc}</td>
+      <td class="num">${fmt(e.price)}</td>
+      <td class="num">${e.commPercent}%</td>
+      <td class="num" style="color:var(--accent2)">${fmt(e.commAmount)}</td>
+      <td>
+        <button class="btn-icon pdf" onclick="exportTradingBillPDF(${e.id})" title="Bill">📄</button>
+        <button class="btn-icon" onclick="openTradingModal(${e.id})" title="Edit">✏️</button>
+        <button class="btn-icon del" onclick="delEntry('tradings',${e.id},'entry')" title="Delete">🗑</button>
+      </td>
+    </tr>`).join('')||'<tr><td colspan="11" class="empty-state"><p>No entries yet</p></td></tr>';
+}
+
+// ===== CASH BOOK =====
+function setCashType(t) {
+  currentCashType=t;
+  document.getElementById('vtype-receipt').classList.toggle('active',t==='receipt');
+  document.getElementById('vtype-payment').classList.toggle('active',t==='payment');
+}
+
+function setCashFilter(f,btn) {
+  currentCashFilter=f;
+  document.querySelectorAll('#page-cashbook .tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCash();
+}
+
+function openCashModal(id=null) {
+  populateAccountSelect('cash-account');
+  document.getElementById('cash-id').value='';
+  if(id) {
+    const e=cashbook.find(c=>c.id===id);
+    if(!e) return;
+    setCashType(e.vtype);
+    ['vno','date','desc','amount'].forEach(f=>{ const el=document.getElementById('cash-'+f); if(el) el.value=e[f]??''; });
+    document.getElementById('cash-account').value=e.account||'';
+  } else {
+    document.getElementById('modal-cash').querySelectorAll('input,textarea').forEach(el=>{ if(el.type!=='hidden') el.value=''; });
+    document.getElementById('cash-date').valueAsDate=new Date();
+    const maxV=cashbook.reduce((a,e)=>Math.max(a,parseInt(e.vno)||0),0);
+    document.getElementById('cash-vno').value='V-'+(maxV+1).toString().padStart(3,'0');
+    setCashType('receipt');
+  }
+  openModal('modal-cash');
+}
+
+function saveCash() {
+  const v=id=>document.getElementById(id)?.value||'';
+  const entry={vno:v('cash-vno'),date:v('cash-date'),vtype:currentCashType,account:v('cash-account'),desc:v('cash-desc'),amount:parseFloat(v('cash-amount'))||0};
+  const editId=v('cash-id');
+  if(editId) { const i=cashbook.findIndex(c=>c.id==editId); if(i!==-1) cashbook[i]={...cashbook[i],...entry}; }
+  else cashbook.unshift({id:Date.now(),...entry});
+  save(); closeModal('modal-cash'); renderCash(); toast('Voucher saved!');
+}
+
+function renderCash(search='') {
+  const q=(search||document.getElementById('cash-search')?.value||'').toLowerCase();
+  let list=[...cashbook].sort((a,b)=>b.id-a.id);
+  if(currentCashFilter!=='all') list=list.filter(e=>e.vtype===currentCashFilter);
+  if(q) list=list.filter(e=>(e.account+e.desc+e.vno).toLowerCase().includes(q));
+  document.getElementById('cash-tbody').innerHTML=list.map(e=>`
+    <tr>
+      <td class="mono">${e.vno}</td>
+      <td class="mono">${e.date}</td>
+      <td><span class="badge ${e.vtype==='receipt'?'buyer':'supplier'}">${e.vtype}</span></td>
+      <td>${e.account||'—'}</td>
+      <td>${e.desc||'—'}</td>
+      <td class="num" style="color:${e.vtype==='receipt'?'var(--green)':'var(--red)'}">${fmt(e.amount)}</td>
+      <td>
+        <button class="btn-icon" onclick="openCashModal(${e.id})">✏️</button>
+        <button class="btn-icon del" onclick="delEntry('cashbook',${e.id},'voucher')">🗑</button>
+      </td>
+    </tr>`).join('')||'<tr><td colspan="7" class="empty-state"><p>No vouchers yet</p></td></tr>';
+}
+
+// ===== JOURNAL =====
+function openJournalModal(id=null) {
+  populateAccountSelect('jnl-account');
+  document.getElementById('jnl-id').value='';
+  if(id) {
+    const e=journals.find(j=>j.id===id);
+    if(!e) return;
+    ['vno','date','narration','debit','credit'].forEach(f=>{ const el=document.getElementById('jnl-'+f); if(el) el.value=e[f]??''; });
+    document.getElementById('jnl-account').value=e.account||'';
+  } else {
+    document.getElementById('modal-journal').querySelectorAll('input,textarea').forEach(el=>{ if(el.type!=='hidden') el.value=''; });
+    document.getElementById('jnl-date').valueAsDate=new Date();
+    const maxV=journals.reduce((a,e)=>Math.max(a,parseInt(e.vno)||0),0);
+    document.getElementById('jnl-vno').value='J-'+(maxV+1).toString().padStart(3,'0');
+  }
+  openModal('modal-journal');
+}
+
+function saveJournal() {
+  const v=id=>document.getElementById(id)?.value||'';
+  const entry={vno:v('jnl-vno'),date:v('jnl-date'),narration:v('jnl-narration'),account:v('jnl-account'),debit:parseFloat(v('jnl-debit'))||0,credit:parseFloat(v('jnl-credit'))||0};
+  const editId=v('jnl-id');
+  if(editId) { const i=journals.findIndex(j=>j.id==editId); if(i!==-1) journals[i]={...journals[i],...entry}; }
+  else journals.unshift({id:Date.now(),...entry});
+  save(); closeModal('modal-journal'); renderJournal(); toast('Journal voucher saved!');
+}
+
+function renderJournal(search='') {
+  const q=(search||'').toLowerCase();
+  let list=[...journals].sort((a,b)=>b.id-a.id);
+  if(q) list=list.filter(e=>(e.narration+e.vno+e.account).toLowerCase().includes(q));
+  document.getElementById('jnl-tbody').innerHTML=list.map(e=>`
+    <tr>
+      <td class="mono">${e.vno}</td>
+      <td class="mono">${e.date}</td>
+      <td>${e.narration||'—'}</td>
+      <td>${e.account||'—'}</td>
+      <td class="num" style="color:var(--red)">${e.debit?fmt(e.debit):'—'}</td>
+      <td class="num" style="color:var(--green)">${e.credit?fmt(e.credit):'—'}</td>
+      <td>
+        <button class="btn-icon" onclick="openJournalModal(${e.id})">✏️</button>
+        <button class="btn-icon del" onclick="delEntry('journals',${e.id},'voucher')">🗑</button>
+      </td>
+    </tr>`).join('')||'<tr><td colspan="7" class="empty-state"><p>No journal vouchers yet</p></td></tr>';
+}
+
+// ===== LEDGER =====
+function renderLedger(search='') {
+  const q=(search||document.getElementById('led-search')?.value||'').toLowerCase();
+  const typeF=document.getElementById('led-type')?.value||'';
+  const parties=[...new Set([
+    ...tradings.map(e=>e.name),
+    ...deliveries.map(e=>e.supplier).filter(Boolean),
+    ...deliveries.map(e=>e.purchaser).filter(Boolean),
+  ])].sort();
+
+  const container=document.getElementById('ledger-container');
+  let filtered=parties.filter(p=>p.toLowerCase().includes(q));
+
+  if(!filtered.length) { container.innerHTML='<div class="empty-state"><p>No parties found</p></div>'; return; }
+
+  container.innerHTML=filtered.map(party=>{
+    let entries=[];
+    tradings.filter(e=>e.name===party&&(!typeF||e.type===typeF)).forEach(e=>{
+      entries.push({date:e.date,type:e.type,desc:e.desc||'Commission',amount:e.commAmount,total:e.price,id:e.id,source:'trading'});
+    });
+    if(!typeF||typeF==='delivery') {
+      deliveries.filter(e=>e.supplier===party).forEach(e=>{
+        entries.push({date:e.date,type:'delivery',desc:`Delivery ${e.billno} (Supplier)`,amount:e.sBrokerage||0,total:e.sNet,id:e.id,source:'delivery'});
+      });
+      deliveries.filter(e=>e.purchaser===party).forEach(e=>{
+        entries.push({date:e.date,type:'delivery',desc:`Delivery ${e.billno} (Purchaser)`,amount:e.pBrokerage||0,total:e.pNet,id:e.id,source:'delivery'});
+      });
+    }
+    entries.sort((a,b)=>b.id-a.id);
+    const totalComm=entries.reduce((a,e)=>a+e.amount,0);
+    return `<div class="party-ledger-card">
+      <div class="party-ledger-header">
+        <div>
+          <h4>${party}</h4>
+          <span style="font-size:11px;color:var(--text3)">${entries.length} records</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="text-align:right">
+            <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">COMM BALANCE</div>
+            <div class="party-balance">${fmt(totalComm)}</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="exportPartyPDF('${party}')">📄</button>
+        </div>
+      </div>
+      <table class="tbl">
+        <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Bill Total</th><th>Commission</th><th>Actions</th></tr></thead>
+        <tbody>${entries.map(e=>`
+          <tr>
+            <td class="mono">${e.date}</td>
+            <td><span class="badge ${e.type}">${e.type}</span></td>
+            <td>${e.desc}</td>
+            <td class="num">${fmt(e.total)}</td>
+            <td class="num" style="color:var(--accent2)">${fmt(e.amount)}</td>
+            <td>${e.source==='trading'?`<button class="btn-icon pdf" onclick="exportTradingBillPDF(${e.id})">📄</button>`:`<button class="btn-icon pdf" onclick="exportDeliveryBillPDF(${e.id})">📄</button>`}</td>
+          </tr>`).join('')||`<tr><td colspan="6" style="padding:16px;color:var(--text3);font-size:13px">No records</td></tr>`}
+        </tbody>
+      </table>
+    </div>`;
+  }).join('');
+}
+
+// ===== TRIAL BALANCE =====
+function setTrialFilter(f,btn) {
+  currentTrialFilter=f;
+  document.querySelectorAll('#page-trial .tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTrial();
+}
+
+function renderTrial() {
+  const parties=[...new Set([...tradings.map(e=>e.name),...deliveries.map(e=>e.supplier).filter(Boolean),...deliveries.map(e=>e.purchaser).filter(Boolean)])].sort();
+  const rows=parties.map(party=>{
+    const tComm=tradings.filter(e=>e.name===party).reduce((a,e)=>a+e.commAmount,0);
+    const dBrok=deliveries.filter(e=>e.supplier===party||e.purchaser===party).reduce((a,e)=>a+(e.sBrokerage||0)+(e.pBrokerage||0),0);
+    const balance=tComm+dBrok;
+    const dr=balance<0?Math.abs(balance):0;
+    const cr=balance>=0?balance:0;
+    return {party,dr,cr,balance};
+  }).filter(r=>{
+    if(currentTrialFilter==='receivable') return r.cr>0;
+    if(currentTrialFilter==='payable') return r.dr>0;
+    if(currentTrialFilter==='pl') return r.cr>0||r.dr>0;
+    return true;
+  });
+
+  const totalDr=rows.reduce((a,r)=>a+r.dr,0);
+  const totalCr=rows.reduce((a,r)=>a+r.cr,0);
+  document.getElementById('trial-total-dr').textContent=fmt(totalDr);
+  document.getElementById('trial-total-cr').textContent=fmt(totalCr);
+
+  document.getElementById('trial-tbody').innerHTML=rows.map(r=>`
+    <tr>
+      <td>${r.party}</td>
+      <td><span class="badge ${r.cr>0?'buyer':'supplier'}">${r.cr>0?'Receivable':'Payable'}</span></td>
+      <td class="num" style="text-align:right;color:var(--red)">${r.dr?fmt(r.dr):'—'}</td>
+      <td class="num" style="text-align:right;color:var(--green)">${r.cr?fmt(r.cr):'—'}</td>
+      <td class="num" style="text-align:right;color:${r.cr>0?'var(--green)':'var(--red)'}">${fmt(Math.abs(r.balance))}</td>
+    </tr>`).join('')||'<tr><td colspan="5" class="empty-state"><p>No data</p></td></tr>';
+
+  // Cash account row
+  const cashIn=cashbook.filter(e=>e.vtype==='receipt').reduce((a,e)=>a+e.amount,0);
+  const cashOut=cashbook.filter(e=>e.vtype==='payment').reduce((a,e)=>a+e.amount,0);
+  const cashBal=cashIn-cashOut;
+  document.getElementById('trial-tbody').innerHTML+=`
+    <tr style="border-top:1px solid var(--border2)">
+      <td><b>Cash in Hand</b></td>
+      <td><span class="badge cash">Cash</span></td>
+      <td class="num" style="text-align:right;color:var(--red)">${cashOut?fmt(cashOut):'—'}</td>
+      <td class="num" style="text-align:right;color:var(--green)">${cashIn?fmt(cashIn):'—'}</td>
+      <td class="num" style="text-align:right;color:${cashBal>=0?'var(--green)':'var(--red)'}">${fmt(Math.abs(cashBal))}</td>
+    </tr>`;
+}
+
+// ===== STOCK LEDGER =====
+function populateStockSelects() {
+  const is=document.getElementById('sl-item'), gs=document.getElementById('sl-godown');
+  const godowns=[...new Set(items.map(i=>i.godown).filter(Boolean))];
+  is.innerHTML='<option value="">All Items</option>'+items.map(i=>`<option value="${i.name}">${i.name}</option>`).join('');
+  gs.innerHTML='<option value="">All Godowns</option>'+godowns.map(g=>`<option>${g}</option>`).join('');
+}
+
+function renderStock() {
+  const item=document.getElementById('sl-item')?.value||'';
+  const godown=document.getElementById('sl-godown')?.value||'';
+  let rows=[];
+  deliveries.forEach(e=>{
+    if(!item||e.item===item) {
+      rows.push({date:e.date,billno:e.billno,item:e.item,godown:godown||'Main',type:'IN',bagsIn:e.bags,bagsOut:0,id:e.id});
+    }
+  });
+  tradings.filter(e=>e.type==='supplier').forEach(e=>{
+    rows.push({date:e.date,billno:e.po||'—',item:item||'Stock',godown:godown||'Main',type:'IN',bagsIn:0,bagsOut:0,weight:e.weight,id:e.id});
+  });
+  rows.sort((a,b)=>new Date(a.date)-new Date(b.date));
+  let balance=0;
+  rows=rows.map(r=>{ balance+=r.bagsIn-r.bagsOut; return {...r,balance}; });
+  document.getElementById('stock-tbody').innerHTML=rows.map(r=>`
+    <tr>
+      <td class="mono">${r.date}</td><td class="mono">${r.billno||'—'}</td><td>${r.item||'—'}</td>
+      <td>${r.godown}</td><td><span class="badge ${r.type==='IN'?'buyer':'supplier'}">${r.type}</span></td>
+      <td class="num">${r.bagsIn||0}</td><td class="num">${r.bagsOut||0}</td>
+      <td class="num" style="color:var(--accent2)">${r.balance}</td>
+    </tr>`).join('')||'<tr><td colspan="8" class="empty-state"><p>No stock data</p></td></tr>';
+}
+
+// ===== REPORTS =====
+function populateReportSelects() {
+  const suppliers=[...new Set(deliveries.map(e=>e.supplier).filter(Boolean))];
+  const purchasers=[...new Set(deliveries.map(e=>e.purchaser).filter(Boolean))];
+  const itms=[...new Set(deliveries.map(e=>e.item).filter(Boolean))];
+  document.getElementById('rpt-supplier').innerHTML='<option value="">All</option>'+suppliers.map(s=>`<option>${s}</option>`).join('');
+  document.getElementById('rpt-purchaser').innerHTML='<option value="">All</option>'+purchasers.map(s=>`<option>${s}</option>`).join('');
+  document.getElementById('rpt-item').innerHTML='<option value="">All</option>'+itms.map(s=>`<option>${s}</option>`).join('');
+}
+
+function renderReport() {
+  const sup=document.getElementById('rpt-supplier').value;
+  const pur=document.getElementById('rpt-purchaser').value;
+  const item=document.getElementById('rpt-item').value;
+  const truck=document.getElementById('rpt-truck').value.toLowerCase();
+  const from=document.getElementById('rpt-from').value;
+  const to=document.getElementById('rpt-to').value;
+  const sortBy=document.getElementById('rpt-sort').value;
+  let list=[...deliveries];
+  if(sup) list=list.filter(e=>e.supplier===sup);
+  if(pur) list=list.filter(e=>e.purchaser===pur);
+  if(item) list=list.filter(e=>e.item===item);
+  if(truck) list=list.filter(e=>(e.truck||'').toLowerCase().includes(truck));
+  if(from) list=list.filter(e=>e.date>=from);
+  if(to) list=list.filter(e=>e.date<=to);
+  if(sortBy==='date') list.sort((a,b)=>a.date.localeCompare(b.date));
+  else if(sortBy==='billno') list.sort((a,b)=>(a.billno||'').localeCompare(b.billno||''));
+  else if(sortBy==='supplier') list.sort((a,b)=>(a.supplier||'').localeCompare(b.supplier||''));
+  else if(sortBy==='purchaser') list.sort((a,b)=>(a.purchaser||'').localeCompare(b.purchaser||''));
+  document.getElementById('rpt-tbody').innerHTML=list.map(e=>`
+    <tr>
+      <td class="mono">${e.billno}</td><td class="mono">${e.date}</td><td>${e.item||'—'}</td>
+      <td>${e.supplier||'—'}</td><td>${e.purchaser||'—'}</td>
+      <td class="num">${e.bags||0}</td><td class="num">${e.supwt||0}</td>
+      <td class="mono">${e.truck||'—'}</td>
+      <td class="num" style="color:var(--red)">${fmt(e.sNet)}</td>
+      <td class="num" style="color:var(--green)">${fmt(e.pNet)}</td>
+    </tr>`).join('')||'<tr><td colspan="10" class="empty-state"><p>No results</p></td></tr>';
+}
+
+// ===== ITEMS =====
+function openItemModal(id=null) {
+  document.getElementById('item-id').value='';
+  if(id) {
+    const e=items.find(i=>i.id===id);
+    if(!e) return;
+    document.getElementById('item-modal-title').textContent='Edit Item';
+    document.getElementById('item-id').value=e.id;
+    document.getElementById('item-name').value=e.name;
+    document.getElementById('item-lot').value=e.lot||0;
+    document.getElementById('item-godown').value=e.godown||'';
+  } else {
+    document.getElementById('item-modal-title').textContent='Add Item';
+    ['item-name','item-lot','item-godown'].forEach(id=>document.getElementById(id).value='');
+  }
+  openModal('modal-item');
+}
+
+function saveItem() {
+  const name=document.getElementById('item-name').value.trim();
+  if(!name){toast('Item name required','error');return;}
+  const entry={name,lot:parseInt(document.getElementById('item-lot').value)||0,godown:document.getElementById('item-godown').value.trim()};
+  const editId=document.getElementById('item-id').value;
+  if(editId){ const i=items.findIndex(x=>x.id==editId); if(i!==-1)items[i]={...items[i],...entry}; }
+  else items.push({id:Date.now(),...entry});
+  save(); closeModal('modal-item'); renderItems(); toast('Item saved!');
+}
+
+function renderItems(search='') {
+  const q=(search||'').toLowerCase();
+  let list=items.filter(i=>i.name.toLowerCase().includes(q));
+  document.getElementById('items-tbody').innerHTML=list.map(i=>`
+    <tr>
+      <td><b>${i.name}</b></td>
+      <td class="num">${i.lot||0}</td>
+      <td>
+        <button class="btn-icon" onclick="openItemModal(${i.id})">✏️</button>
+        <button class="btn-icon del" onclick="delEntry('items',${i.id},'item')">🗑</button>
+      </td>
+    </tr>`).join('')||'<tr><td colspan="3" class="empty-state"><p>No items yet</p></td></tr>';
+}
+
+// ===== ACCOUNTS =====
+function openAccountModal(id=null) {
+  document.getElementById('acc-id').value='';
+  if(id) {
+    const e=accounts.find(a=>a.id===id);
+    if(!e) return;
+    document.getElementById('acc-modal-title').textContent='Edit Account';
+    document.getElementById('acc-id').value=e.id;
+    document.getElementById('acc-code').value=e.code;
+    document.getElementById('acc-head').value=e.head;
+    document.getElementById('acc-type').value=e.type;
+  } else {
+    document.getElementById('acc-modal-title').textContent='Add Account';
+    ['acc-code','acc-head'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('acc-type').value='asset';
+  }
+  openModal('modal-account');
+}
+
+function saveAccount() {
+  const code=document.getElementById('acc-code').value.trim();
+  const head=document.getElementById('acc-head').value.trim();
+  if(!code||!head){toast('Code and head required','error');return;}
+  const entry={code,head,type:document.getElementById('acc-type').value};
+  const editId=document.getElementById('acc-id').value;
+  if(editId){ const i=accounts.findIndex(a=>a.id==editId); if(i!==-1)accounts[i]={...accounts[i],...entry}; }
+  else accounts.push({id:Date.now(),...entry});
+  save(); closeModal('modal-account'); renderAccounts(); toast('Account saved!');
+}
+
+function renderAccounts(search='') {
+  const q=(search||'').toLowerCase();
+  let list=accounts.filter(a=>(a.code+a.head).toLowerCase().includes(q));
+  document.getElementById('acc-tbody').innerHTML=list.map(a=>`
+    <tr>
+      <td class="mono">${a.code}</td>
+      <td><b>${a.head}</b></td>
+      <td><span class="badge ${a.type==='income'?'buyer':a.type==='expense'?'supplier':'cash'}">${a.type}</span></td>
+      <td>
+        <button class="btn-icon" onclick="openAccountModal(${a.id})">✏️</button>
+        <button class="btn-icon del" onclick="delEntry('accounts',${a.id},'account')">🗑</button>
+      </td>
+    </tr>`).join('')||'<tr><td colspan="4" class="empty-state"><p>No accounts yet</p></td></tr>';
+}
+
+// ===== USERS =====
+function openUserModal() { openModal('modal-user'); ['u-name','u-pass','u-confirm'].forEach(id=>document.getElementById(id).value=''); document.getElementById('u-supervisor').checked=false; }
+
+function saveUser() {
+  const name=document.getElementById('u-name').value.trim();
+  const pass=document.getElementById('u-pass').value;
+  const confirm=document.getElementById('u-confirm').value;
+  if(!name||!pass){toast('Name and password required','error');return;}
+  if(pass!==confirm){toast('Passwords do not match','error');return;}
+  if(users.find(u=>u.username.toLowerCase()===name.toLowerCase())){toast('Username already exists','error');return;}
+  users.push({id:Date.now(),username:name,password:pass,supervisor:document.getElementById('u-supervisor').checked});
+  save(); closeModal('modal-user'); renderUsers(); toast('User added!');
+}
+
+function deleteUser(id) {
+  if(id===currentUser.id){toast('Cannot delete yourself','error');return;}
+  if(!confirm('Delete this user?')) return;
+  users=users.filter(u=>u.id!==id); save(); renderUsers(); toast('User deleted','error');
+}
+
+function renderUsers() {
+  document.getElementById('users-container').innerHTML=users.map(u=>`
+    <div class="user-card">
+      <div class="user-info">
+        <h4>${u.username}${u.supervisor?'<span class="supervisor-badge">Supervisor</span>':''}</h4>
+        <span>ID: ${u.id}</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        ${u.id!==currentUser?.id?`<button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id})">Delete</button>`:'<span style="font-size:11px;color:var(--text3)">Current User</span>'}
+      </div>
+    </div>`).join('');
+}
+
+// ===== DELETE =====
+function delEntry(store, id, label) {
+  if(!confirm(`Delete this ${label}?`)) return;
+  const map={'deliveries':deliveries,'tradings':tradings,'cashbook':cashbook,'journals':journals,'items':items,'accounts':accounts};
+  const arr=map[store];
+  const i=arr.findIndex(e=>e.id===id);
+  if(i!==-1) arr.splice(i,1);
+  save();
+  const renders={deliveries:renderDelivery,tradings:renderTrading,cashbook:renderCash,journals:renderJournal,items:renderItems,accounts:renderAccounts};
+  if(renders[store]) renders[store]();
+  renderDashboard();
+  toast(label+' deleted');
+}
+
+// ===== HELPERS =====
+function fmt(n) { return (parseFloat(n)||0).toLocaleString('en-PK',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function capitalize(s) { return s.charAt(0).toUpperCase()+s.slice(1); }
+
+function updateSuggestions() {
+  const supNames=[...new Set(deliveries.map(e=>e.supplier).filter(Boolean))];
+  const purNames=[...new Set(deliveries.map(e=>e.purchaser).filter(Boolean))];
+  document.getElementById('sup-suggestions').innerHTML=supNames.map(n=>`<option value="${n}">`).join('');
+  document.getElementById('pur-suggestions').innerHTML=purNames.map(n=>`<option value="${n}">`).join('');
+}
+
+function updatePartyList() {
+  const names=[...new Set(tradings.map(e=>e.name))];
+  document.getElementById('tr-party-list').innerHTML=names.map(n=>`<option value="${n}">`).join('');
+}
+
+function populateItemSelect() {
+  document.getElementById('del-item').innerHTML='<option value="">Select Item</option>'+items.map(i=>`<option value="${i.name}">${i.name}</option>`).join('');
+}
+
+function populateAccountSelect(selectId) {
+  document.getElementById(selectId).innerHTML='<option value="">Select Account</option>'+accounts.map(a=>`<option value="${a.head}">${a.code} - ${a.head}</option>`).join('');
+}
+
+function populateDeliverySelects() { populateItemSelect(); updateSuggestions(); }
+
+// ===== PDF EXPORTS =====
+function pdfHeader(doc, title, subtitle) {
+  doc.setFillColor(13,15,20);
+  doc.rect(0,0,210,38,'F');
+  doc.setFontSize(20); doc.setTextColor(255,255,255); doc.setFont('helvetica','bold');
+  doc.text('AMI BROKER',14,18);
+  doc.setFontSize(9); doc.setTextColor(160,180,220);
+  doc.text('Commission & Delivery System',14,26);
+  doc.setFontSize(11); doc.setTextColor(126,184,255);
+  doc.text(title,14,34);
+  if(subtitle) { doc.setFontSize(8); doc.setTextColor(130,146,176); doc.text(subtitle,210-14,34,{align:'right'}); }
+  doc.setTextColor(30,41,59);
+}
+
+function exportDeliveryBillPDF(id) {
+  const e=deliveries.find(d=>d.id===id); if(!e) return;
+  const {jsPDF}=window.jspdf; const doc=new jsPDF();
+  pdfHeader(doc,`Delivery Bill — ${e.billno}`,`Date: ${e.date}`);
+  let y=50;
+  doc.setFontSize(10); doc.setTextColor(60,70,90);
+  doc.setFont('helvetica','bold'); doc.text('ITEM:',14,y); doc.setFont('helvetica','normal'); doc.text(e.item||'—',40,y);
+  doc.setFont('helvetica','bold'); doc.text('BAGS:',100,y); doc.setFont('helvetica','normal'); doc.text(String(e.bags||0),120,y);
+  y+=8;
+  doc.setFont('helvetica','bold'); doc.text('TRUCK:',14,y); doc.setFont('helvetica','normal'); doc.text(e.truck||'—',40,y);
+  doc.setFont('helvetica','bold'); doc.text('TRANSPORTER:',100,y); doc.setFont('helvetica','normal'); doc.text(e.transporter||'—',140,y);
+  y+=14;
+  const half=88;
+  // Supplier side
+  doc.setFillColor(240,245,255); doc.rect(14,y-5,half,58,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(30,50,120);
+  doc.text('SUPPLIER: '+( e.supplier||'N/A'),16,y);
+  y+=7;
+  const sRows=[['Weight',e.supwt||0],['Rate',e.srate||0],['Gross',((e.supwt||0)*(e.srate||0)).toFixed(2)],['Coolie',e.sCoolie||0],['Cartage',e.sCartage||0],['Kanta',e.sKanta||0],['Brokerage',e.sBrokerage||0],['Misc',e.sMisc||0]];
+  sRows.forEach(([l,v])=>{ doc.setFont('helvetica','normal'); doc.setTextColor(60,70,90); doc.text(l+':',16,y); doc.text(String(v),80,y,{align:'right'}); y+=6; });
+  doc.setFont('helvetica','bold'); doc.setTextColor(180,50,50);
+  doc.text('NET AMOUNT: '+fmt(e.sNet),16,y);
+  // Purchaser side
+  y=y-6*8-7-7;
+  const px=14+half+6;
+  doc.setFillColor(240,255,245); doc.rect(px,y-5,half,58,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(20,100,60);
+  doc.text('PURCHASER: '+(e.purchaser||'N/A'),px+2,y);
+  y+=7;
+  const pRows=[['Weight',e.purwt||0],['Rate',e.prate||0],['Gross',((e.purwt||0)*(e.prate||0)).toFixed(2)],['Coolie',e.pCoolie||0],['Cartage',e.pCartage||0],['Kanta',e.pKanta||0],['Brokerage',e.pBrokerage||0],['Misc',e.pMisc||0]];
+  pRows.forEach(([l,v])=>{ doc.setFont('helvetica','normal'); doc.setTextColor(60,70,90); doc.text(l+':',px+2,y); doc.text(String(v),px+half-2,y,{align:'right'}); y+=6; });
+  doc.setFont('helvetica','bold'); doc.setTextColor(20,120,60);
+  doc.text('NET AMOUNT: '+fmt(e.pNet),px+2,y);
+  doc.setFontSize(7); doc.setTextColor(150,160,180); doc.setFont('helvetica','italic');
+  doc.text('Generated by AMI Broker — Commission & Delivery System',105,285,{align:'center'});
+  doc.save(`Delivery_${e.billno}_${e.date}.pdf`);
+}
+
+function exportTradingBillPDF(id) {
+  const e=tradings.find(t=>t.id===id); if(!e) return;
+  const {jsPDF}=window.jspdf; const doc=new jsPDF();
+  pdfHeader(doc,`${capitalize(e.type)} Invoice`,`Date: ${e.date}`);
+  let y=52;
+  doc.setFontSize(13); doc.setTextColor(30,41,59); doc.setFont('helvetica','bold');
+  doc.text(e.name.toUpperCase(),14,y);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,120,150);
+  if(e.po) doc.text('PO: '+e.po,14,y+6);
+  doc.autoTable({
+    startY:y+14,
+    head:[['Description','Rate','Weight','Product Total']],
+    body:[[e.desc||capitalize(e.type)+' Charges',e.rate.toFixed(2),e.weight.toFixed(2),(e.rate*e.weight).toFixed(2)]],
+    theme:'striped',
+    headStyles:{fillColor:[13,15,20],textColor:[255,255,255]},
+    styles:{fontSize:10,cellPadding:5},
+  });
+  const fy=doc.lastAutoTable.finalY+12;
+  const rows=[['Product Subtotal:',(e.rate*e.weight).toFixed(2)],['Transport:',e.transport.toFixed(2)],['Misc Expenses:',e.misc.toFixed(2)],[`Commission (${e.commPercent}%):`,e.commAmount.toFixed(2)]];
+  rows.forEach(([l,v],i)=>{ doc.setFontSize(9); doc.setTextColor(80,90,110); doc.text(l,130,fy+i*7); doc.text(v,195,fy+i*7,{align:'right'}); });
+  const gy=fy+rows.length*7+4;
+  doc.setFillColor(240,245,255); doc.rect(125,gy-5,70,12,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20,40,100);
+  doc.text('GRAND TOTAL:',130,gy+3); doc.text(e.price.toFixed(2),195,gy+3,{align:'right'});
+  doc.setFontSize(7); doc.setTextColor(150,160,180); doc.setFont('helvetica','italic');
+  doc.text('Generated by AMI Broker — Commission & Delivery System',105,285,{align:'center'});
+  doc.save(`Bill_${e.name}_${e.date}.pdf`);
+}
+
+function exportPartyPDF(partyName) {
+  const {jsPDF}=window.jspdf; const doc=new jsPDF();
+  pdfHeader(doc,`Ledger: ${partyName}`,'AMI Broker');
+  const pEntries=tradings.filter(e=>e.name===partyName);
+  const total=pEntries.reduce((a,e)=>a+e.commAmount,0);
+  doc.autoTable({
+    startY:45,
+    head:[['Date','Type','PO','Bill Total','Comm%','Commission']],
+    body:pEntries.map(e=>[e.date,e.type,e.po||'-',fmt(e.price),e.commPercent+'%',fmt(e.commAmount)]),
+    foot:[['','','','','TOTAL',fmt(total)]],
+    headStyles:{fillColor:[13,15,20],textColor:[255,255,255]},
+    footStyles:{fillColor:[235,240,255],textColor:[20,40,120],fontStyle:'bold'},
+  });
+  doc.save(`${partyName}_Ledger.pdf`);
+}
+
+function exportAllLedgerPDF() {
+  const {jsPDF}=window.jspdf; const doc=new jsPDF();
+  const parties=[...new Set(tradings.map(e=>e.name))].sort();
+  parties.forEach((p,i)=>{
+    if(i>0) doc.addPage();
+    pdfHeader(doc,`Ledger: ${p}`);
+    const pe=tradings.filter(e=>e.name===p);
+    const tot=pe.reduce((a,e)=>a+e.commAmount,0);
+    doc.autoTable({
+      startY:45,
+      head:[['Date','Type','PO','Total','Comm%','Commission']],
+      body:pe.map(e=>[e.date,e.type,e.po||'-',fmt(e.price),e.commPercent+'%',fmt(e.commAmount)]),
+      foot:[['','','','','TOTAL',fmt(tot)]],
+      headStyles:{fillColor:[13,15,20]},
+    });
+  });
+  doc.save('Master_Ledger_AMI.pdf');
+}
+
+function exportDeliveryReport() {
+  const {jsPDF}=window.jspdf; const doc=new jsPDF('landscape');
+  pdfHeader(doc,'Delivery Report — All Records');
+  doc.autoTable({
+    startY:45,
+    head:[['Bill#','Date','Item','Supplier','Purchaser','Bags','Sup Wt','Pur Wt','S.Rate','P.Rate','Truck','S.Net','P.Net']],
+    body:deliveries.map(e=>[e.billno,e.date,e.item||'—',e.supplier||'—',e.purchaser||'—',e.bags||0,e.supwt||0,e.purwt||0,e.srate||0,e.prate||0,e.truck||'—',fmt(e.sNet),fmt(e.pNet)]),
+    headStyles:{fillColor:[13,15,20],textColor:[255,255,255],fontSize:8},
+    styles:{fontSize:8,cellPadding:3},
+  });
+  doc.save('Delivery_Report_AMI.pdf');
+}
+
+function exportReportPDF() {
+  renderReport();
+  const rows=[...document.getElementById('rpt-tbody').querySelectorAll('tr')];
+  const {jsPDF}=window.jspdf; const doc=new jsPDF('landscape');
+  pdfHeader(doc,'Delivery Report — Filtered');
+  doc.autoTable({
+    startY:45,
+    head:[['Bill#','Date','Item','Supplier','Purchaser','Bags','Wgt','Truck','S.Net','P.Net']],
+    body:deliveries.map(e=>[e.billno,e.date,e.item||'—',e.supplier||'—',e.purchaser||'—',e.bags||0,e.supwt||0,e.truck||'—',fmt(e.sNet),fmt(e.pNet)]),
+    headStyles:{fillColor:[13,15,20]},
+    styles:{fontSize:9},
+  });
+  doc.save('Delivery_Report_Filtered.pdf`');
+}
+
+function exportCashPDF() {
+  const {jsPDF}=window.jspdf; const doc=new jsPDF();
+  pdfHeader(doc,'Cash Book');
+  const cashIn=cashbook.filter(e=>e.vtype==='receipt').reduce((a,e)=>a+e.amount,0);
+  const cashOut=cashbook.filter(e=>e.vtype==='payment').reduce((a,e)=>a+e.amount,0);
+  doc.autoTable({
+    startY:45,
+    head:[['Voucher#','Date','Type','Account','Description','Amount']],
+    body:cashbook.map(e=>[e.vno,e.date,e.vtype,e.account||'—',e.desc||'—',fmt(e.amount)]),
+    foot:[['','','','','Total Receipts:',fmt(cashIn)],['','','','','Total Payments:',fmt(cashOut)],['','','','','Cash Balance:',fmt(cashIn-cashOut)]],
+    headStyles:{fillColor:[13,15,20]},
+    footStyles:{fillColor:[235,245,255]},
+  });
+  doc.save('CashBook_AMI.pdf');
+}
+
+function exportJournalPDF() {
+  const {jsPDF}=window.jspdf; const doc=new jsPDF();
+  pdfHeader(doc,'Journal Vouchers');
+  const totalDr=journals.reduce((a,e)=>a+e.debit,0);
+  const totalCr=journals.reduce((a,e)=>a+e.credit,0);
+  doc.autoTable({
+    startY:45,
+    head:[['Voucher#','Date','Narration','Account','Debit','Credit']],
+    body:journals.map(e=>[e.vno,e.date,e.narration||'—',e.account||'—',e.debit?fmt(e.debit):'—',e.credit?fmt(e.credit):'—']),
+    foot:[['','','','','Total Dr:',fmt(totalDr)],['','','','','Total Cr:',fmt(totalCr)]],
+    headStyles:{fillColor:[13,15,20]},
+  });
+  doc.save('Journal_AMI.pdf`');
+}
+
+function exportTrialPDF() {
+  const {jsPDF}=window.jspdf; const doc=new jsPDF();
+  pdfHeader(doc,'Trial Balance');
+  const rows=[];
+  [...new Set([...tradings.map(e=>e.name),...deliveries.map(e=>e.supplier).filter(Boolean),...deliveries.map(e=>e.purchaser).filter(Boolean)])].sort().forEach(party=>{
+    const bal=tradings.filter(e=>e.name===party).reduce((a,e)=>a+e.commAmount,0);
+    rows.push([party,bal>=0?'Receivable':'Payable',bal<0?fmt(Math.abs(bal)):'—',bal>=0?fmt(bal):'—']);
+  });
+  doc.autoTable({
+    startY:45,
+    head:[['Party','Type','Debit','Credit']],
+    body:rows,
+    headStyles:{fillColor:[13,15,20]},
+  });
+  doc.save('TrialBalance_AMI.pdf');
+}
+
+function exportStockPDF() {
+  const {jsPDF}=window.jspdf; const doc=new jsPDF();
+  pdfHeader(doc,'Stock Ledger');
+  doc.autoTable({
+    startY:45,
+    head:[['Date','Bill#','Item','Godown','Type','Bags In','Bags Out','Balance']],
+    body:deliveries.map(e=>[e.date,e.billno,e.item||'—','Main','IN',e.bags||0,0,e.bags||0]),
+    headStyles:{fillColor:[13,15,20]},
+  });
+  doc.save('StockLedger_AMI.pdf');
+}
+
+// init
+window.onload = () => {
+  document.getElementById('l-user').focus();
+};
+</script>
+</body>
+</html>
